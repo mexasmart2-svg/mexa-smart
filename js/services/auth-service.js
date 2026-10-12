@@ -1,163 +1,200 @@
+
 /* =====================================================
-   MEXA SMART — AUTH SERVICE
-   Versi 1.0.0
-   Layanan autentikasi dan sesi terpusat
+   MEXA SMART — AUTH MODULE
+   Penghubung Auth Service dengan MEXA SMART
+   Versi 1.0.1
    ===================================================== */
 
-(function (window) {
+(function (window, document) {
   "use strict";
 
-  const VERSION = "1.0.0";
-
-  if (window.MEXA_AUTH_SERVICE_VERSION === VERSION) {
-    console.warn("MEXA SMART: Auth Service sudah aktif.");
+  if (window.MEXA_AUTH_MODULE) {
+    console.warn("[MEXA AUTH] Modul sudah dimuat.");
     return;
   }
 
-  function getClient() {
-    if (
-      window.MEXA_SUPABASE_CLIENT &&
-      typeof window.MEXA_SUPABASE_CLIENT.getClient === "function"
-    ) {
-      return window.MEXA_SUPABASE_CLIENT.getClient();
-    }
+  const VERSION = "1.0.1";
 
-    return window.mexaSupabase || null;
-  }
+  let started = false;
+  let authSubscription = null;
 
-  function requireClient() {
-    const client = getClient();
-
-    if (!client) {
+  function getAuthService() {
+    if (!window.MEXA_AUTH) {
       throw new Error(
-        "Supabase belum siap. Periksa konfigurasi dan urutan script."
+        "MEXA AUTH SERVICE belum dimuat. Periksa auth-service.js."
       );
     }
 
-    return client;
+    return window.MEXA_AUTH;
   }
 
-  async function getSession() {
-    const client = requireClient();
-    const { data, error } = await client.auth.getSession();
+  function emit(eventName, detail) {
+    const bus = window.MEXA_EVENT_BUS;
 
-    if (error) throw error;
-
-    return data.session || null;
-  }
-
-  async function getUser() {
-    const client = requireClient();
-    const { data, error } = await client.auth.getUser();
-
-    if (error) {
-      if (error.name === "AuthSessionMissingError") {
-        return null;
-      }
-
-      throw error;
+    if (bus && typeof bus.emit === "function") {
+      bus.emit(eventName, detail || {});
     }
 
-    return data.user || null;
+    document.dispatchEvent(
+      new CustomEvent("mexa:" + eventName, {
+        detail: detail || {}
+      })
+    );
   }
 
-  async function signInWithPassword(email, password) {
-    if (!email || !password) {
-      throw new Error("Email dan kata sandi wajib diisi.");
-    }
+  async function getCurrentUser() {
+    return getAuthService().getUser();
+  }
 
-    const client = requireClient();
-
-    const { data, error } = await client.auth.signInWithPassword({
-      email: String(email).trim(),
+  async function login(email, password) {
+    const data = await getAuthService().signInWithPassword(
+      email,
       password
-    });
+    );
 
-    if (error) throw error;
+    emit("auth:login", {
+      user: data.user || null
+    });
 
     return data;
   }
 
-  async function signUp(email, password, options = {}) {
-    if (!email || !password) {
-      throw new Error("Email dan kata sandi wajib diisi.");
+  async function register(
+    email,
+    password,
+    displayName,
+    username
+  ) {
+    if (String(password || "").length < 6) {
+      throw new Error("Kata sandi minimal 6 karakter.");
     }
 
-    const client = requireClient();
+    const options = {
+      data: {}
+    };
 
-    const { data, error } = await client.auth.signUp({
-      email: String(email).trim(),
+    if (displayName && displayName.trim()) {
+      options.data.display_name = displayName.trim();
+    }
+
+    if (username && username.trim()) {
+      options.data.username = username.trim().toLowerCase();
+    }
+
+    const data = await getAuthService().signUp(
+      email,
       password,
       options
-    });
+    );
 
-    if (error) throw error;
+    emit("auth:register", {
+      user: data.user || null,
+      session: data.session || null
+    });
 
     return data;
   }
 
-  async function signOut() {
-    const client = requireClient();
-    const { error } = await client.auth.signOut();
+  async function logout() {
+    await getAuthService().signOut();
 
-    if (error) throw error;
+    emit("auth:logout", {});
 
     return true;
   }
 
-  async function resetPasswordForEmail(email, redirectTo) {
-    if (!email) {
-      throw new Error("Email wajib diisi.");
-    }
-
-    const client = requireClient();
-
-    const options = {};
-
-    if (redirectTo) {
-      options.redirectTo = redirectTo;
-    }
-
-    const { data, error } = await client.auth.resetPasswordForEmail(
-      String(email).trim(),
-      options
+  async function sendPasswordReset(email, redirectTo) {
+    const data = await getAuthService().resetPasswordForEmail(
+      email,
+      redirectTo
     );
 
-    if (error) throw error;
+    emit("auth:password-reset-requested", {
+      email: String(email).trim()
+    });
 
     return data;
   }
 
-  function onAuthStateChange(callback) {
+  function watchSession(callback) {
     if (typeof callback !== "function") {
-      throw new TypeError("Callback harus berupa fungsi.");
+      throw new TypeError("Callback pemantauan sesi tidak valid.");
     }
 
-    const client = requireClient();
-
-    return client.auth.onAuthStateChange((event, session) => {
-      try {
-        callback(event, session);
-      } catch (error) {
-        console.error("[MEXA AUTH] Callback gagal:", error);
+    return getAuthService().onAuthStateChange(
+      function (event, session) {
+        callback({
+          event: event,
+          session: session,
+          user: session ? session.user : null
+        });
       }
-    });
+    );
   }
 
-  const api = Object.freeze({
+  async function start() {
+    if (started) {
+      return {
+        success: true,
+        version: VERSION,
+        alreadyStarted: true
+      };
+    }
+
+    const auth = getAuthService();
+
+    authSubscription = watchSession(function (state) {
+      emit("auth:session-changed", state);
+    });
+
+    try {
+      const user = await auth.getUser();
+
+      started = true;
+
+      emit("auth:ready", {
+        user: user
+      });
+
+      console.info("[MEXA AUTH] Modul autentikasi siap.");
+
+      return {
+        success: true,
+        version: VERSION,
+        user: user
+      };
+    } catch (error) {
+      if (authSubscription) {
+        authSubscription.data.subscription.unsubscribe();
+        authSubscription = null;
+      }
+
+      throw error;
+    }
+  }
+
+  function stop() {
+    if (authSubscription && authSubscription.data &&
+        authSubscription.data.subscription) {
+      authSubscription.data.subscription.unsubscribe();
+    }
+
+    authSubscription = null;
+    started = false;
+
+    return true;
+  }
+
+  window.MEXA_AUTH_MODULE = {
     version: VERSION,
-    getClient,
-    getSession,
-    getUser,
-    signInWithPassword,
-    signUp,
-    signOut,
-    resetPasswordForEmail,
-    onAuthStateChange
-  });
+    start: start,
+    stop: stop,
+    getCurrentUser: getCurrentUser,
+    login: login,
+    register: register,
+    logout: logout,
+    sendPasswordReset: sendPasswordReset,
+    watchSession: watchSession
+  };
 
-  window.MEXA_AUTH = api;
-  window.MEXA_AUTH_SERVICE_VERSION = VERSION;
-
-  console.log("MEXA SMART: Auth Service berhasil dimuat.");
-})(window);
+})(window, document);
