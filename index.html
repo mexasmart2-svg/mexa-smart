@@ -124,36 +124,50 @@
     </button>
   </nav>
 
-  <!-- 1. SUPABASE SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- 2. KONFIGURASI MEXA SMART -->
-  <script src="./config/mexa-config.js"></script>
-  <!-- 3. LAYANAN SUPABASE DAN DATA -->
-  <script src="./js/services/supabase-client.js"></script>
-  <script src="./js/services/auth-service.js"></script>
-  <script src="./js/services/database-service.js"></script>
-  <script src="./js/services/storage-service.js"></script>
-  <script src="./js/services/profile-service.js"></script>
-  <!-- 4. SISTEM INTI -->
-  <script src="./js/core/mexa-event-bus.js"></script>
-  <script src="./js/core/mexa-module-registry.js"></script>
-  <script src="./js/core/mexa-error-handler.js"></script>
-  <script src="./js/core/mexa-lifecycle.js"></script>
-  <script src="./js/modules/auth/auth-module.js"></script>
-  <script src="./js/core/mexa-smart-core.js"></script>
-  <!-- 5. MODUL MEXA SMART -->
-  <script src="./js/modules/home/home-module.js"></script>
-  <script src="./js/modules/posts/posts-module.js"></script>
-  <script src="./js/modules/friends/friends-module.js"></script>
-  <script src="./js/modules/profile/profile-module.js"></script>
-  <script src="./js/modules/stories/stories-module.js"></script>
-  <script src="./js/modules/media/media-module.js"></script>
-  <script src="./js/modules/reels/reels-module.js"></script>
-  <script src="./js/modules/messenger/messenger-module.js"></script>
-  <script src="./js/modules/groups/groups-module.js"></script>
-  <script src="./js/modules/notifications/notifications-module.js"></script>
-  <script src="./js/modules/mexa-ai/mexa-ai-module.js"></script>
-  <!-- 6. PEMULAAN CORE DAN MODUL -->
+  
+<!-- 1. SUPABASE SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 2. KONFIGURASI MEXA SMART -->
+<script src="./config/mexa-config.js"></script>
+
+<!-- 3. SUPABASE DAN SERVICES -->
+<script src="./js/services/supabase-client.js"></script>
+<script src="./js/services/auth-service.js"></script>
+<script src="./js/services/database-service.js"></script>
+<script src="./js/services/storage-service.js"></script>
+<script src="./js/services/profile-service.js"></script>
+
+<!-- 4. SISTEM EVENT -->
+<script src="./js/core/mexa-event-bus.js"></script>
+
+<!-- 5. MODULE REGISTRY -->
+<script src="./js/core/mexa-module-registry.js"></script>
+
+<!-- 6. ERROR HANDLER -->
+<script src="./js/core/mexa-error-handler.js"></script>
+
+<!-- 7. LIFECYCLE -->
+<script src="./js/core/mexa-lifecycle.js"></script>
+
+<!-- 8. SEMUA MODUL MEXA SMART -->
+<script src="./js/modules/auth/auth-module.js"></script>
+<script src="./js/modules/home/home-module.js"></script>
+<script src="./js/modules/posts/posts-module.js"></script>
+<script src="./js/modules/friends/friends-module.js"></script>
+<script src="./js/modules/profile/profile-module.js"></script>
+<script src="./js/modules/stories/stories-module.js"></script>
+<script src="./js/modules/media/media-module.js"></script>
+<script src="./js/modules/reels/reels-module.js"></script>
+<script src="./js/modules/messenger/messenger-module.js"></script>
+<script src="./js/modules/groups/groups-module.js"></script>
+<script src="./js/modules/notifications/notifications-module.js"></script>
+<script src="./js/modules/mexa-ai/mexa-ai-module.js"></script>
+
+<!-- 9. CORE: DIMUAT SETELAH MODUL -->
+<script src="./js/core/mexa-smart-core.js"></script>
+  
+  <!-- 10. PEMULAAN CORE DAN MODUL -->
  
 <script>
 (function () {
