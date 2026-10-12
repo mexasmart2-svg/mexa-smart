@@ -154,112 +154,150 @@
   <script src="./js/modules/notifications/notifications-module.js"></script>
   <script src="./js/modules/mexa-ai/mexa-ai-module.js"></script>
   <!-- 6. PEMULAAN CORE DAN MODUL -->
-  <script>
-    (function () {
-      "use strict";
-      const statusElement =
-        document.getElementById("mexa-system-status");
-      const messageElement =
-        document.getElementById("mexa-core-message");
-      const errorElement =
-        document.getElementById("mexa-core-error");
-      function showStatus(message) {
-        if (statusElement) {
-          statusElement.textContent = message;
-        }
-      }
-      function showMessage(message) {
-        if (messageElement) {
-          messageElement.textContent = message;
-        }
-      }
-      async function initializeMEXA() {
-        try {
-          if (!window.MEXA_SMART) {
-            throw new Error(
-              "File pusat MEXA SMART belum berhasil dimuat."
-            );
-          }
-          await window.MEXA_SMART.start();
-          if (!window.MEXA_LIFECYCLE) {
-            throw new Error(
-              "Sistem pengelola modul belum tersedia."
-            );
-          }
-         const modules = ["auth","home","posts","friends","profile","stories","media","reels","messenger","groups","notifications"];
-          const results = await Promise.allSettled(
-            modules.map(function (name) {
-              return window.MEXA_LIFECYCLE.start(name);
-            })
-          );
-         
-const failed = [];
+ 
+<script>
+(function () {
+  "use strict";
 
-results.forEach(function (result, index) {
-  if (result.status === "rejected") {
-    const errorMessage =
-      result.reason && result.reason.message
-        ? result.reason.message
-        : String(result.reason || "Kesalahan tidak diketahui.");
+  const statusElement =
+    document.getElementById("mexa-system-status");
 
-    failed.push(modules[index] + ": " + errorMessage);
+  const messageElement =
+    document.getElementById("mexa-core-message");
 
-    console.error(
-      "[MEXA SMART] Modul gagal:",
-      modules[index],
-      result.reason
-    );
-  }
-});
+  const errorElement =
+    document.getElementById("mexa-core-error");
+
+  function showStatus(message) {
+    if (statusElement) {
+      statusElement.textContent = message;
     }
-          });
-          if (window.MEXA_AI_MODULE) {
-            console.info(
-              "[MEXA SMART] Modul MEXA AI tersedia, " +
-              "tetapi belum diaktifkan."
-            );
-          }
-          if (failed.length > 0) {
-            showStatus(
-              "Core aktif, sebagian modul perlu diperiksa."
-            );
-          showMessage("Detail kesalahan: " + failed.join(" | "));  );
-          } else {
-            showStatus(
-              "Core aktif. Modul dasar berhasil dimulai."
-            );
-            showMessage(
-              "Fondasi MEXA SMART berhasil dimulai. " +
-              "Fitur sosial dan database akan disambungkan bertahap."
-            );
-          }
-          if (errorElement) {
-            errorElement.textContent = "";
-            errorElement.hidden = true;
-          }
-          document.documentElement.dataset.mexaReady =
-            failed.length === 0 ? "true" : "partial";
-        } catch (error) {
-          showStatus(
-            "MEXA SMART memerlukan pemeriksaan."
-          );
-          showMessage(
-            "Pusat sistem belum dapat dimulai."
-          );
-          if (errorElement) {
-            errorElement.textContent =
-              error.message ||
-              "Terjadi kesalahan saat menyiapkan MEXA SMART.";
-            errorElement.hidden = false;
-          }
-          document.documentElement.dataset.mexaReady =
-            "false";
-          console.error("[MEXA SMART]", error);
-        }
+  }
+
+  function showMessage(message) {
+    if (messageElement) {
+      messageElement.textContent = message;
+    }
+  }
+
+  async function initializeMEXA() {
+    try {
+      if (!window.MEXA_SMART) {
+        throw new Error(
+          "File pusat MEXA SMART belum berhasil dimuat."
+        );
       }
-      initializeMEXA();
-    })();
-  </script>
-</body>
-  </html>
-  
+
+      await window.MEXA_SMART.start();
+
+      if (!window.MEXA_LIFECYCLE) {
+        throw new Error(
+          "Sistem pengelola modul belum tersedia."
+        );
+      }
+
+      const modules = [
+        "auth",
+        "home",
+        "posts",
+        "friends",
+        "profile",
+        "stories",
+        "media",
+        "reels",
+        "messenger",
+        "groups",
+        "notifications"
+      ];
+
+      const results = await Promise.allSettled(
+        modules.map(function (name) {
+          return window.MEXA_LIFECYCLE.start(name);
+        })
+      );
+
+      const failed = [];
+
+      results.forEach(function (result, index) {
+        if (result.status === "rejected") {
+          const errorMessage =
+            result.reason && result.reason.message
+              ? result.reason.message
+              : String(
+                  result.reason ||
+                  "Kesalahan tidak diketahui."
+                );
+
+          failed.push(
+            modules[index] + ": " + errorMessage
+          );
+
+          console.error(
+            "[MEXA SMART] Modul gagal:",
+            modules[index],
+            result.reason
+          );
+        }
+      });
+
+      if (window.MEXA_AI_MODULE) {
+        console.info(
+          "[MEXA SMART] Modul MEXA AI tersedia, " +
+          "tetapi belum diaktifkan."
+        );
+      }
+
+      if (failed.length > 0) {
+        showStatus(
+          "Core aktif, sebagian modul perlu diperiksa."
+        );
+
+        showMessage(
+          "Detail kesalahan: " + failed.join(" | ")
+        );
+      } else {
+        showStatus(
+          "Core aktif. Modul dasar berhasil dimulai."
+        );
+
+        showMessage(
+          "Fondasi MEXA SMART berhasil dimulai. " +
+          "Fitur sosial dan database akan disambungkan bertahap."
+        );
+      }
+
+      if (errorElement) {
+        errorElement.textContent = "";
+        errorElement.hidden = true;
+      }
+
+      document.documentElement.dataset.mexaReady =
+        failed.length === 0 ? "true" : "partial";
+
+    } catch (error) {
+      showStatus(
+        "MEXA SMART memerlukan pemeriksaan."
+      );
+
+      showMessage(
+        "Pusat sistem belum dapat dimulai."
+      );
+
+      if (errorElement) {
+        errorElement.textContent =
+          error.message ||
+          "Terjadi kesalahan saat menyiapkan MEXA SMART.";
+
+        errorElement.hidden = false;
+      }
+
+      document.documentElement.dataset.mexaReady =
+        "false";
+
+      console.error("[MEXA SMART]", error);
+    }
+  }
+
+  initializeMEXA();
+})();
+</script>
