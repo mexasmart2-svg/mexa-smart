@@ -1,4 +1,3 @@
-
 /* =====================================================
    MEXA SMART — CONFIGURATION
    Versi 1.0.0
@@ -21,7 +20,8 @@
     BACKEND_PROVIDER: "supabase",
 
     SUPABASE_URL: "https://zavqwtzrvbgwidjyzspj.supabase.co",
-SUPABASE_PUBLISHABLE_KEY: "sb_publishable_m9DQgljp6aDbVI08TjmEWA_jk4JVmJm
+    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_m9DQgljp6aDbVI08TjmEWA_jk4JVmJm",
+
     CORE: {
       DEBUG: true,
       MODULE_TIMEOUT: 10000
