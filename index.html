@@ -139,6 +139,7 @@
   <script src="./js/core/mexa-module-registry.js"></script>
   <script src="./js/core/mexa-error-handler.js"></script>
   <script src="./js/core/mexa-lifecycle.js"></script>
+  <script src="./js/modules/auth/auth-module.js"></script>
   <script src="./js/core/mexa-smart-core.js"></script>
   <!-- 5. MODUL MEXA SMART -->
   <script src="./js/modules/home/home-module.js"></script>
@@ -185,18 +186,7 @@
               "Sistem pengelola modul belum tersedia."
             );
           }
-          const modules = [
-            "home",
-            "posts",
-            "friends",
-            "profile",
-            "stories",
-            "media",
-            "reels",
-            "messenger",
-            "groups",
-            "notifications"
-          ];
+         const modules = ["auth","home","posts","friends","profile","stories","media","reels","messenger","groups","notifications"];
           const results = await Promise.allSettled(
             modules.map(function (name) {
               return window.MEXA_LIFECYCLE.start(name);
