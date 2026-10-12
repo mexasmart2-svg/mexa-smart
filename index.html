@@ -144,7 +144,20 @@
   <script src="./js/core/mexa-lifecycle.js"></script>
   <script src="./js/core/mexa-smart-core.js"></script>
 
-  <!-- 5. PEMULAAN CORE -->
+  <!-- 5. MODUL MEXA SMART -->
+  <script src="./js/modules/home/home-module.js"></script>
+  <script src="./js/modules/posts/posts-module.js"></script>
+  <script src="./js/modules/friends/friends-module.js"></script>
+  <script src="./js/modules/profile/profile-module.js"></script>
+  <script src="./js/modules/stories/stories-module.js"></script>
+  <script src="./js/modules/media/media-module.js"></script>
+  <script src="./js/modules/reels/reels-module.js"></script>
+  <script src="./js/modules/messenger/messenger-module.js"></script>
+  <script src="./js/modules/groups/groups-module.js"></script>
+  <script src="./js/modules/notifications/notifications-module.js"></script>
+  <script src="./js/modules/mexa-ai/mexa-ai-module.js"></script>
+
+  <!-- 6. PEMULAAN CORE DAN MODUL -->
   <script>
     (function () {
       "use strict";
@@ -159,7 +172,15 @@
         document.getElementById("mexa-core-error");
 
       function showStatus(message) {
-        statusElement.textContent = message;
+        if (statusElement) {
+          statusElement.textContent = message;
+        }
+      }
+
+      function showMessage(message) {
+        if (messageElement) {
+          messageElement.textContent = message;
+        }
       }
 
       async function initializeMEXA() {
@@ -172,26 +193,99 @@
 
           await window.MEXA_SMART.start();
 
-          showStatus("Pusat sistem berhasil dimulai.");
-          messageElement.textContent =
-            "Core aktif. Layanan dasar telah diperiksa.";
+          if (!window.MEXA_LIFECYCLE) {
+            throw new Error(
+              "Sistem pengelola modul belum tersedia."
+            );
+          }
+
+          const modules = [
+            "home",
+            "posts",
+            "friends",
+            "profile",
+            "stories",
+            "media",
+            "reels",
+            "messenger",
+            "groups",
+            "notifications"
+          ];
+
+          const results = await Promise.allSettled(
+            modules.map(function (name) {
+              return window.MEXA_LIFECYCLE.start(name);
+            })
+          );
+
+          const failed = [];
+
+          results.forEach(function (result, index) {
+            if (result.status === "rejected") {
+              failed.push(modules[index]);
+              console.error(
+                "[MEXA SMART] Modul gagal:",
+                modules[index],
+                result.reason
+              );
+            }
+          });
+
+          if (window.MEXA_AI_MODULE) {
+            console.info(
+              "[MEXA SMART] Modul MEXA AI tersedia, " +
+              "tetapi belum diaktifkan."
+            );
+          }
+
+          if (failed.length > 0) {
+            showStatus(
+              "Core aktif, sebagian modul perlu diperiksa."
+            );
+
+            showMessage(
+              "Modul yang perlu diperiksa: " +
+              failed.join(", ")
+            );
+          } else {
+            showStatus(
+              "Core aktif. Modul dasar berhasil dimulai."
+            );
+
+            showMessage(
+              "Fondasi MEXA SMART berhasil dimulai. " +
+              "Fitur sosial dan database akan disambungkan bertahap."
+            );
+          }
+
+          if (errorElement) {
+            errorElement.textContent = "";
+            errorElement.hidden = true;
+          }
 
           document.documentElement.dataset.mexaReady =
-            "true";
+            failed.length === 0 ? "true" : "partial";
         } catch (error) {
-          showStatus("MEXA SMART memerlukan pemeriksaan.");
+          showStatus(
+            "MEXA SMART memerlukan pemeriksaan."
+          );
 
-          messageElement.textContent =
-            "Pusat sistem belum dapat dimulai.";
+          showMessage(
+            "Pusat sistem belum dapat dimulai."
+          );
 
-          errorElement.textContent =
-            error.message ||
-            "Terjadi kesalahan saat menyiapkan MEXA SMART.";
+          if (errorElement) {
+            errorElement.textContent =
+              error.message ||
+              "Terjadi kesalahan saat menyiapkan MEXA SMART.";
 
-          errorElement.hidden = false;
+            errorElement.hidden = false;
+          }
 
           document.documentElement.dataset.mexaReady =
             "false";
+
+          console.error("[MEXA SMART]", error);
         }
       }
 
