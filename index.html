@@ -124,38 +124,145 @@
     </button>
   </nav>
 
-
-<!-- 1. SUPABASE SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- 2. KONFIGURASI -->
-<script src="mexa-config.js"></script>
-
-<!-- 3. SERVICES -->
-<script src="supabase-client.js"></script>
-<script src="auth-service.js"></script>
-<script src="database-service.js"></script>
-<script src="storage-service.js"></script>
-<script src="profile-service.js"></script>
-
-<!-- 4. CORE -->
-<script src="mexa-event-bus.js"></script>
-<script src="mexa-module-registry.js"></script>
-<script src="mexa-error-handler.js"></script>
-<script src="mexa-lifecycle.js"></script>
-<script src="mexa-smart-core.js"></script>
-
-<!-- 5. MODULES -->
-<script src="home-module.js"></script>
-<script src="posts-module.js"></script>
-<script src="friends-module.js"></script>
-<script src="profile-module.js"></script>
-<script src="stories-module.js"></script>
-<script src="media-module.js"></script>
-<script src="reels-module.js"></script>
-<script src="messenger-module.js"></script>
-<script src="groups-module.js"></script>
-<script src="notifications-module.js"></script>
-<script src="mexa-ai-module.js"></script>
+  <!-- 1. SUPABASE SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- 2. KONFIGURASI MEXA SMART -->
+  <script src="./config/mexa-config.js"></script>
+  <!-- 3. LAYANAN SUPABASE DAN DATA -->
+  <script src="./js/services/supabase-client.js"></script>
+  <script src="./js/services/auth-service.js"></script>
+  <script src="./js/services/database-service.js"></script>
+  <script src="./js/services/storage-service.js"></script>
+  <script src="./js/services/profile-service.js"></script>
+  <!-- 4. SISTEM INTI -->
+  <script src="./js/core/mexa-event-bus.js"></script>
+  <script src="./js/core/mexa-module-registry.js"></script>
+  <script src="./js/core/mexa-error-handler.js"></script>
+  <script src="./js/core/mexa-lifecycle.js"></script>
+  <script src="./js/core/mexa-smart-core.js"></script>
+  <!-- 5. MODUL MEXA SMART -->
+  <script src="./js/modules/home/home-module.js"></script>
+  <script src="./js/modules/posts/posts-module.js"></script>
+  <script src="./js/modules/friends/friends-module.js"></script>
+  <script src="./js/modules/profile/profile-module.js"></script>
+  <script src="./js/modules/stories/stories-module.js"></script>
+  <script src="./js/modules/media/media-module.js"></script>
+  <script src="./js/modules/reels/reels-module.js"></script>
+  <script src="./js/modules/messenger/messenger-module.js"></script>
+  <script src="./js/modules/groups/groups-module.js"></script>
+  <script src="./js/modules/notifications/notifications-module.js"></script>
+  <script src="./js/modules/mexa-ai/mexa-ai-module.js"></script>
+  <!-- 6. PEMULAAN CORE DAN MODUL -->
+  <script>
+    (function () {
+      "use strict";
+      const statusElement =
+        document.getElementById("mexa-system-status");
+      const messageElement =
+        document.getElementById("mexa-core-message");
+      const errorElement =
+        document.getElementById("mexa-core-error");
+      function showStatus(message) {
+        if (statusElement) {
+          statusElement.textContent = message;
+        }
+      }
+      function showMessage(message) {
+        if (messageElement) {
+          messageElement.textContent = message;
+        }
+      }
+      async function initializeMEXA() {
+        try {
+          if (!window.MEXA_SMART) {
+            throw new Error(
+              "File pusat MEXA SMART belum berhasil dimuat."
+            );
+          }
+          await window.MEXA_SMART.start();
+          if (!window.MEXA_LIFECYCLE) {
+            throw new Error(
+              "Sistem pengelola modul belum tersedia."
+            );
+          }
+          const modules = [
+            "home",
+            "posts",
+            "friends",
+            "profile",
+            "stories",
+            "media",
+            "reels",
+            "messenger",
+            "groups",
+            "notifications"
+          ];
+          const results = await Promise.allSettled(
+            modules.map(function (name) {
+              return window.MEXA_LIFECYCLE.start(name);
+            })
+          );
+          const failed = [];
+          results.forEach(function (result, index) {
+            if (result.status === "rejected") {
+              failed.push(modules[index]);
+              console.error(
+                "[MEXA SMART] Modul gagal:",
+                modules[index],
+                result.reason
+              );
+            }
+          });
+          if (window.MEXA_AI_MODULE) {
+            console.info(
+              "[MEXA SMART] Modul MEXA AI tersedia, " +
+              "tetapi belum diaktifkan."
+            );
+          }
+          if (failed.length > 0) {
+            showStatus(
+              "Core aktif, sebagian modul perlu diperiksa."
+            );
+            showMessage(
+              "Modul yang perlu diperiksa: " +
+              failed.join(", ")
+            );
+          } else {
+            showStatus(
+              "Core aktif. Modul dasar berhasil dimulai."
+            );
+            showMessage(
+              "Fondasi MEXA SMART berhasil dimulai. " +
+              "Fitur sosial dan database akan disambungkan bertahap."
+            );
+          }
+          if (errorElement) {
+            errorElement.textContent = "";
+            errorElement.hidden = true;
+          }
+          document.documentElement.dataset.mexaReady =
+            failed.length === 0 ? "true" : "partial";
+        } catch (error) {
+          showStatus(
+            "MEXA SMART memerlukan pemeriksaan."
+          );
+          showMessage(
+            "Pusat sistem belum dapat dimulai."
+          );
+          if (errorElement) {
+            errorElement.textContent =
+              error.message ||
+              "Terjadi kesalahan saat menyiapkan MEXA SMART.";
+            errorElement.hidden = false;
+          }
+          document.documentElement.dataset.mexaReady =
+            "false";
+          console.error("[MEXA SMART]", error);
+        }
+      }
+      initializeMEXA();
+    })();
+  </script>
 </body>
-</html>
+  </html>
+  
