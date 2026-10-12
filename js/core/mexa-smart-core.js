@@ -1,160 +1,107 @@
-/* =====================================================
-   MEXA SMART — CENTRAL CORE
-   Pusat koordinasi aplikasi
-   Version: 1.0.0
-   ===================================================== */
-
+/* MEXA SMART — CENTRAL CORE V1.1.0 */
 (function (window) {
   "use strict";
 
-  const VERSION = "1.0.0";
-
-  if (window.MEXA_SMART) {
-    console.warn("[MEXA SMART] Core sudah tersedia.");
-    return;
-  }
+  if (window.MEXA_SMART) return;
 
   let started = false;
-  let starting = false;
-  let startPromise = null;
+  let starting = null;
   let lastError = null;
 
-  function log(...args) {
-    const config = window.MEXA_CONFIG;
+  function getStatus() {
+    const lifecycle = window.MEXA_LIFECYCLE;
+    const registry = window.MEXA_MODULE_REGISTRY;
+    const clientService = window.MEXA_SUPABASE_CLIENT;
 
-    if (config && config.CORE && config.CORE.DEBUG) {
-      console.log("[MEXA SMART CORE]", ...args);
-    }
+    return {
+      name: "MEXA SMART",
+      version: "1.1.0",
+      started: started,
+      starting: Boolean(starting),
+      supabaseReady: Boolean(
+        clientService &&
+        typeof clientService.getClient === "function" &&
+        clientService.getClient()
+      ),
+      lifecycle: lifecycle ? lifecycle.getStatus() : null,
+      registry: registry ? registry.getStatus() : null,
+      lastError: lastError
+    };
   }
 
-  function getClientService() {
-    return window.MEXA_SUPABASE_CLIENT || null;
-  }
+  async function start(moduleNames) {
+    if (started) return getStatus();
+    if (starting) return starting;
 
-  async function start() {
-    if (started) {
-      return getStatus();
-    }
-
-    if (starting && startPromise) {
-      return startPromise;
-    }
-
-    starting = true;
-
-    startPromise = (async function () {
+    starting = (async function () {
       try {
         const config = window.MEXA_CONFIG;
+        const service = window.MEXA_SUPABASE_CLIENT;
+        const lifecycle = window.MEXA_LIFECYCLE;
 
-        if (!config) {
-          throw new Error(
-            "Konfigurasi MEXA belum dimuat."
-          );
+        if (!config) throw new Error("Konfigurasi MEXA belum dimuat.");
+        if (!window.supabase) throw new Error("Supabase SDK belum dimuat.");
+        if (!service || typeof service.getClient !== "function") {
+          throw new Error("Supabase client service belum tersedia.");
         }
+        if (!lifecycle) throw new Error("Lifecycle belum dimuat.");
 
-        if (!window.supabase) {
-          throw new Error(
-            "Supabase SDK belum dimuat."
-          );
+        let client = service.getClient();
+        if (!client && typeof service.init === "function") {
+          await service.init();
+          client = service.getClient();
         }
+        if (!client) throw new Error("Supabase belum siap.");
 
-        const clientService = getClientService();
+        const names = Array.isArray(moduleNames) ? moduleNames : [];
+        const results = await Promise.allSettled(
+          names.map(function (name) {
+            return lifecycle.start(name, { core: "MEXA SMART" });
+          })
+        );
 
-        if (
-          !clientService ||
-          typeof clientService.getClient !== "function"
-        ) {
-          throw new Error(
-            "Layanan koneksi Supabase belum tersedia."
-          );
-        }
+        const failures = results
+          .map(function (result, index) {
+            return result.status === "rejected"
+              ? { module: names[index], error: result.reason }
+              : null;
+          })
+          .filter(Boolean);
 
-        let client = clientService.getClient();
-
-        if (
-          !client &&
-          typeof clientService.init === "function"
-        ) {
-          await clientService.init();
-          client = clientService.getClient();
-        }
-
-        if (!client) {
-          throw new Error(
-            "Koneksi Supabase belum berhasil diinisialisasi."
-          );
+        if (failures.length) {
+          lastError = failures.map(function (item) {
+            return item.module + ": " +
+              (item.error && item.error.message || item.error);
+          }).join(" | ");
+        } else {
+          lastError = null;
         }
 
         started = true;
-        lastError = null;
 
-        log("Core berhasil dimulai.");
-
-        const eventBus = window.MEXA_EVENT_BUS;
-
-        if (eventBus) {
-          eventBus.emit("core:ready", {
-            version: VERSION,
-            timestamp: new Date().toISOString()
+        const bus = window.MEXA_EVENT_BUS;
+        if (bus && typeof bus.emit === "function") {
+          bus.emit("core:ready", {
+            version: "1.1.0",
+            failures: failures
           });
         }
 
         return getStatus();
       } catch (error) {
         lastError = error.message || String(error);
-
-        const errorHandler = window.MEXA_ERROR_HANDLER;
-
-        if (
-          errorHandler &&
-          typeof errorHandler.report === "function"
-        ) {
-          errorHandler.report(error, {
-            source: "mexa-smart-core",
-            operation: "start"
-          });
-        } else {
-          console.error("[MEXA SMART CORE]", error);
-        }
-
         throw error;
       } finally {
-        starting = false;
-        startPromise = null;
+        starting = null;
       }
     })();
 
-    return startPromise;
-  }
-
-  function getStatus() {
-    const clientService = getClientService();
-
-    return {
-      name: "MEXA SMART",
-      version: VERSION,
-      started: started,
-      starting: starting,
-      supabaseReady: Boolean(
-        clientService &&
-        typeof clientService.getClient === "function" &&
-        clientService.getClient()
-      ),
-      services: {
-        auth: Boolean(window.MEXA_AUTH),
-        database: Boolean(window.MEXA_DATABASE),
-        storage: Boolean(window.MEXA_STORAGE),
-        profile: Boolean(window.MEXA_PROFILE)
-      },
-      lastError: lastError
-    };
+    return starting;
   }
 
   window.MEXA_SMART = Object.freeze({
-    version: VERSION,
+    version: "1.1.0",
     start: start,
     getStatus: getStatus
   });
-
-  log("Core berhasil dimuat.");
 })(window);
