@@ -192,16 +192,26 @@
               return window.MEXA_LIFECYCLE.start(name);
             })
           );
-          const failed = [];
-          results.forEach(function (result, index) {
-            if (result.status === "rejected") {
-              failed.push(modules[index]);
-              console.error(
-                "[MEXA SMART] Modul gagal:",
-                modules[index],
-                result.reason
-              );
-            }
+         
+const failed = [];
+
+results.forEach(function (result, index) {
+  if (result.status === "rejected") {
+    const errorMessage =
+      result.reason && result.reason.message
+        ? result.reason.message
+        : String(result.reason || "Kesalahan tidak diketahui.");
+
+    failed.push(modules[index] + ": " + errorMessage);
+
+    console.error(
+      "[MEXA SMART] Modul gagal:",
+      modules[index],
+      result.reason
+    );
+  }
+});
+    }
           });
           if (window.MEXA_AI_MODULE) {
             console.info(
