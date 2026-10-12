@@ -223,10 +223,7 @@ results.forEach(function (result, index) {
             showStatus(
               "Core aktif, sebagian modul perlu diperiksa."
             );
-            showMessage(
-              "Modul yang perlu diperiksa: " +
-              failed.join(", ")
-            );
+          showMessage("Detail kesalahan: " + failed.join(" | "));  );
           } else {
             showStatus(
               "Core aktif. Modul dasar berhasil dimulai."
