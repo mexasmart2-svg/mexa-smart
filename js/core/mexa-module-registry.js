@@ -1,160 +1,108 @@
-/* =====================================================
-   MEXA SMART — MODULE REGISTRY
-   Pusat pendaftaran dan status modul
-   Version: 1.0.0
-   ===================================================== */
-
+/* MEXA SMART — MODULE REGISTRY V1.1.0 */
 (function (window) {
   "use strict";
 
-  const VERSION = "1.0.0";
-
-  if (window.MEXA_MODULE_REGISTRY) {
-    console.warn(
-      "[MEXA SMART] Module Registry sudah tersedia."
-    );
-    return;
-  }
+  if (window.MEXA_MODULE_REGISTRY) return;
 
   const modules = new Map();
 
-  function log(...args) {
-    const config = window.MEXA_CONFIG;
-
-    if (config && config.CORE && config.CORE.DEBUG) {
-      console.log("[MEXA MODULE REGISTRY]", ...args);
-    }
-  }
-
-  function normalizeName(name) {
+  function normalize(name) {
     if (typeof name !== "string" || !name.trim()) {
-      throw new TypeError(
-        "Nama modul harus berupa teks yang tidak kosong."
-      );
+      throw new TypeError("Nama modul tidak valid.");
     }
-
     return name.trim().toLowerCase();
   }
 
   function register(name, options) {
-    const moduleName = normalizeName(name);
-    const settings = options || {};
+    const key = normalize(name);
+    const opts = options || {};
+    const existing = modules.get(key);
 
-    if (modules.has(moduleName)) {
-      throw new Error(
-        'Modul "' + moduleName + '" sudah terdaftar.'
-      );
+    // Pendaftaran ulang memperbarui data, bukan menggandakan modul.
+    if (existing) {
+      if (opts.version) existing.version = opts.version;
+      if (opts.dependencies) {
+        existing.dependencies = opts.dependencies.slice();
+      }
+      return get(key);
     }
 
-    const record = {
-      name: moduleName,
-      version:
-        typeof settings.version === "string"
-          ? settings.version
-          : "1.0.0",
+    modules.set(key, {
+      name: key,
+      version: opts.version || "1.0.0",
+      dependencies: Array.isArray(opts.dependencies)
+        ? opts.dependencies.slice()
+        : [],
       status: "registered",
       registeredAt: new Date().toISOString(),
       error: null
-    };
-
-    modules.set(moduleName, record);
-
-    log("Modul terdaftar:", moduleName);
-
-    return Object.freeze({
-      name: record.name,
-      version: record.version,
-      status: record.status
     });
+
+    return get(key);
   }
 
   function setStatus(name, status, error) {
-    const moduleName = normalizeName(name);
-    const record = modules.get(moduleName);
+    const key = normalize(name);
+    const item = modules.get(key);
 
-    if (!record) {
-      throw new Error(
-        'Modul "' + moduleName + '" belum terdaftar.'
-      );
+    if (!item) {
+      throw new Error('Modul "' + key + '" belum terdaftar.');
     }
 
-    const allowedStatuses = [
-      "registered",
-      "initializing",
-      "ready",
-      "disabled",
-      "error"
+    const allowed = [
+      "registered", "initializing", "ready", "disabled", "error"
     ];
 
-    if (!allowedStatuses.includes(status)) {
-      throw new Error(
-        'Status modul "' + status + '" tidak dikenal.'
-      );
+    if (!allowed.includes(status)) {
+      throw new Error("Status tidak valid: " + status);
     }
 
-    record.status = status;
-    record.error =
-      status === "error"
-        ? String(error || "Terjadi kesalahan pada modul.")
-        : null;
+    item.status = status;
+    item.error = status === "error"
+      ? String(error && error.message || error || "Kesalahan modul.")
+      : null;
 
-    log("Status modul:", moduleName, status);
-
-    return get(moduleName);
+    return get(key);
   }
 
   function get(name) {
-    const moduleName = normalizeName(name);
-    const record = modules.get(moduleName);
-
-    return record ? { ...record } : null;
+    const item = modules.get(normalize(name));
+    return item ? { ...item, dependencies: item.dependencies.slice() } : null;
   }
 
   function has(name) {
-    return modules.has(normalizeName(name));
+    return modules.has(normalize(name));
   }
 
   function list() {
-    return Array.from(modules.values()).map(
-      function (record) {
-        return { ...record };
-      }
-    );
+    return Array.from(modules.keys()).map(get);
   }
 
   function remove(name) {
-    const moduleName = normalizeName(name);
-    const removed = modules.delete(moduleName);
-
-    if (removed) {
-      log("Pendaftaran modul dihapus:", moduleName);
-    }
-
-    return removed;
+    return modules.delete(normalize(name));
   }
 
   function getStatus() {
     const counts = {
-      registered: 0,
-      initializing: 0,
-      ready: 0,
-      disabled: 0,
-      error: 0
+      registered: 0, initializing: 0, ready: 0,
+      disabled: 0, error: 0
     };
 
-    modules.forEach(function (record) {
-      counts[record.status] += 1;
+    modules.forEach(function (item) {
+      if (Object.prototype.hasOwnProperty.call(counts, item.status)) {
+        counts[item.status]++;
+      }
     });
 
     return {
-      version: VERSION,
+      version: "1.1.0",
       totalModules: modules.size,
       counts: counts
     };
   }
 
   window.MEXA_MODULE_REGISTRY = Object.freeze({
-    version: VERSION,
+    version: "1.1.0",
     register: register,
     setStatus: setStatus,
     get: get,
@@ -163,6 +111,4 @@
     remove: remove,
     getStatus: getStatus
   });
-
-  log("Module Registry berhasil dimuat.");
 })(window);
